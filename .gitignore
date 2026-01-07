@@ -1,3 +1,8 @@
+# ==================================================
+# DEPENDENCIES
+# ==================================================
+node_modules/
+.pnp.*
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -5,13 +10,176 @@
 !.yarn/sdks
 !.yarn/versions
 
-# Whether you use PnP or not, the node_modules folder is often used to store
-# build artifacts that should be gitignored
-node_modules
+# ==================================================
+# BUILD OUTPUTS
+# ==================================================
+dist/
+build/
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.map
+*.jsbundle
+web-build/
 
-# Swap the comments on the following lines if you wish to use zero-installs
-# In that case, don't forget to run `yarn config set enableGlobalCache false`!
-# Documentation here: https://yarnpkg.com/features/caching#zero-installs
+# ==================================================
+# CACHES
+# ==================================================
+.metro-cache
+.turbo/
+.cache/
+.tmp/
+babel.config.js-*
+.repo/
 
-#!.yarn/cache
-.pnp.*
+# ==================================================
+# REACT NATIVE - iOS (для всех iOS папок)
+# ==================================================
+# iOS Dependencies
+**/ios/Pods/
+**/Podfile.lock
+**/Podfile.lock
+
+# iOS Build files
+**/ios/build/
+**/ios/DerivedData/
+
+# Xcode workspace and user data
+**/*.xcworkspace/
+!**/*.xcworkspace/contents.xcworkspacedata
+**/*.xcodeproj/project.xcworkspace/
+**/*.xcodeproj/xcuserdata/
+
+# ==================================================
+# REACT NATIVE - Android (для всех Android папок)
+# ==================================================
+**/android/.gradle/
+**/android/build/
+**/android/local.properties
+**/*.keystore
+**/android/app/build/
+**/android/.idea/
+**/android/captures/
+**/android/gradlew.bat
+**/android/gradlew
+**/.expo/
+
+# ==================================================
+# REACT NATIVE SPECIFIC
+# ==================================================
+.expo/
+.expo-shared/
+.expo/ios/Pods/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Metro bundler
+*.hot-update.json
+__generated__/
+.history/
+
+# ==================================================
+# EXAMPLE-APP SPECIFIC (React Native приложение)
+# ==================================================
+example-app/node_modules/
+example-app/package-lock.json
+example-app/yarn.lock
+example-app/.expo/
+example-app/.expo-shared/
+example-app/web-build/
+example-app/__generated__/
+example-app/.history/
+example-app/*.jsbundle
+example-app/*.map
+
+# iOS для example-app
+example-app/ios/Pods/
+example-app/ios/build/
+example-app/ios/*.xcworkspace/
+example-app/ios/*.xcodeproj/xcuserdata/
+example-app/ios/Podfile.lock
+
+# Android для example-app
+example-app/android/.gradle/
+example-app/android/build/
+example-app/android/app/build/
+example-app/android/local.properties
+
+# ==================================================
+# PACKAGE MANAGERS
+# ==================================================
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+shrinkwrap.yaml
+bun.lockb
+
+# ==================================================
+# ENVIRONMENT
+# ==================================================
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env*.local
+
+# ==================================================
+# LOGS
+# ==================================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+*.log
+logs/
+
+# ==================================================
+# COVERAGE
+# ==================================================
+coverage/
+*.lcov
+.nyc_output/
+
+example-app/vendor/
+# ==================================================
+# IDE
+# ==================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ==================================================
+# OS
+# ==================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ==================================================
+# TESTING
+# ==================================================
+jest-coverage/
+test-results/
+*.trx
+*.junit

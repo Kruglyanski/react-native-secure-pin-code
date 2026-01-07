@@ -1,0 +1,23 @@
+{
+  "name": "react-native-secure-pin",
+  "version": "0.1.0",
+  "description": "Secure PIN code screen with biometric authentication for React Native (JS-only, New Architecture compatible)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native-biometrics": "^3.0.0",
+    "react-native-keychain": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

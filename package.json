@@ -1,4 +1,16 @@
 {
   "name": "react-native-secure-pin-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "example-app"
+  ],
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.7",
+    "prettier": "2.8.8",
+    "react": "19.2.0",
+    "react-native": "0.83.1"
+  },
   "packageManager": "yarn@4.12.0"
 }
