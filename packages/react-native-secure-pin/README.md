@@ -1,4 +1,4 @@
-eact Native Secure PIN Code
+React Native Secure PIN Code
 
 A secure, customizable PIN code solution for React Native with optional biometric authentication and built-in lockout protection.
 
