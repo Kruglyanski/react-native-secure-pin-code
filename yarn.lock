@@ -4564,6 +4564,7 @@ __metadata:
     react: "npm:19.2.0"
     react-native: "npm:0.83.1"
     react-native-biometrics: "npm:^3.0.0"
+    react-native-device-info: "npm:^15.0.1"
     react-native-keychain: "npm:^9.0.0"
     react-native-safe-area-context: "npm:^5.5.2"
     react-native-secure-pin: "workspace:*"
@@ -7642,6 +7643,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-native-device-info@npm:^15.0.1":
+  version: 15.0.1
+  resolution: "react-native-device-info@npm:15.0.1"
+  peerDependencies:
+    react-native: "*"
+  checksum: 10c0/f33a28b44bc9a67939f2c837ea55c6f59f3096323b5ccc834093bece941d343bad3d86b0faa9340004c2e657abe47fac6cee539d9274f5fabfb5745bfdc77c92
+  languageName: node
+  linkType: hard
+
 "react-native-keychain@npm:^9.0.0":
   version: 9.2.3
   resolution: "react-native-keychain@npm:9.2.3"
@@ -7679,6 +7689,7 @@ __metadata:
   peerDependencies:
     react: ">=18.0.0"
     react-native-biometrics: ^3.0.0
+    react-native-device-info: ^11.0.0
     react-native-keychain: ^9.0.0
   languageName: unknown
   linkType: soft

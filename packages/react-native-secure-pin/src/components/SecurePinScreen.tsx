@@ -1,11 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ScrollView, Text, TouchableOpacity } from 'react-native';
-import type { StyleProp, ViewStyle, TextStyle } from 'react-native';
-
-import { useSecurePin } from '../hooks/useSecurePin';
-import { styles } from './styles';
-import { PinKeypad } from './PinKeypad';
-import { PinDots } from './PinDots';
+import { useState, useEffect, useCallback } from "react";
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
+} from "react-native";
+import { useSecurePin } from "../context/SecurePinContext";
+import { styles } from "./styles";
+import { PinKeypad } from "./PinKeypad";
+import { PinDots } from "./PinDots";
+import { PinFlow } from "../types";
 
 interface SecurePinScreenProps {
   pinLength?: number;
@@ -15,166 +21,208 @@ interface SecurePinScreenProps {
   titleStyle?: StyleProp<TextStyle>;
   subtitleStyle?: StyleProp<TextStyle>;
   keyStyle?: StyleProp<ViewStyle>;
+  titleSet?: string;
   titleEnter?: string;
   enterMessage?: string;
+  createMessage?: string;
+  confirmMessage?: string;
+  doNotMatchMessage?: string;
   lockedMessage?: string;
   wrongPinMessage?: (attemptsLeft: number) => string;
+  textSubDescriptionLockedPage?: string;
   textDescriptionLockedPage?: string;
   exitButtonText?: string;
 }
 
 export const SecurePinScreen: React.FC<SecurePinScreenProps> = ({
+  pinLength = 4,
   onSuccess,
   onPressForgetPin,
   titleStyle,
   subtitleStyle,
   containerStyle,
   keyStyle,
-  titleEnter = 'Enter PIN',
-  enterMessage = 'Enter PIN',
-  lockedMessage = 'The maximum number of attempts has been reached',
+  titleSet = "Set PIN",
+  titleEnter = "Enter PIN",
+  enterMessage = "Enter PIN",
+  createMessage = "Create PIN",
+  confirmMessage = "Confirm PIN",
+  doNotMatchMessage = "PINs do not match",
+  lockedMessage = "Maximum attempts reached",
   wrongPinMessage,
-  textDescriptionLockedPage = 'You have reached the maximum number of attempts',
-  exitButtonText = 'Forget PIN?',
-  pinLength = 4,
+  textSubDescriptionLockedPage = "Try again later:",
+  textDescriptionLockedPage = "You have reached the maximum number of attempts",
+  exitButtonText = "Forget PIN?",
 }) => {
   const {
-    verifyPin,
-    authenticateWithBiometrics,
+    hasPin,
+    setPin,
     isLocked,
-    getAttemptsLeft,
+    attemptsLeft,
+    loginWithBiometrics,
+    verifyPin,
   } = useSecurePin();
-  const mountedRef = useRef(true);
 
   const [digits, setDigits] = useState<string[]>([]);
+  const [firstPin, setFirstPin] = useState<string | null>(null);
+  const [flow, setFlow] = useState<PinFlow | null>(null);
   const [message, setMessage] = useState<string>(enterMessage);
   const [showErrorDots, setShowErrorDots] = useState(false);
-  const [locked, setLocked] = useState(false);
 
+  //determine the flow
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  /** 🔐 биометрия */
-  const runBiometrics = useCallback(async () => {
-    const ok = await authenticateWithBiometrics();
-    if (ok && mountedRef.current) {
-      onSuccess?.();
+    if (isLocked) {
+      setMessage(textSubDescriptionLockedPage);
+      return;
     }
-  }, [authenticateWithBiometrics, onSuccess]);
 
+    if (hasPin === null) return;
+
+    if (hasPin) {
+      setFlow("enter");
+      setMessage(enterMessage);
+    } else {
+      setFlow("set");
+      setMessage(createMessage);
+    }
+  }, [
+    hasPin,
+    isLocked,
+    createMessage,
+    enterMessage,
+    textSubDescriptionLockedPage,
+  ]);
+
+  //biometrics
   useEffect(() => {
-    runBiometrics();
-  }, [runBiometrics]);
-
-  /** 🔒 проверка lock */
-  const checkLock = useCallback(async () => {
-    const value = await isLocked();
-    if (!mountedRef.current) return;
-
-    setLocked(value);
-    if (value) setMessage(lockedMessage);
-  }, [isLocked, lockedMessage]);
-
-  useEffect(() => {
-    checkLock();
-  }, [checkLock]);
+    if (flow === "enter" && hasPin) {
+      (async () => {
+        const ok = await loginWithBiometrics();
+        if (ok) onSuccess?.();
+      })();
+    }
+  }, [flow, hasPin, loginWithBiometrics, onSuccess]);
 
   const handleComplete = useCallback(
     async (pin: string) => {
-      const lockedNow = await isLocked();
-
-      if (lockedNow) {
-        if (!mountedRef.current) return;
-        setLocked(true);
-        setMessage(lockedMessage);
+      if (flow === "set") {
+        setFirstPin(pin);
+        setFlow("confirm");
         setDigits([]);
+        setMessage(confirmMessage);
         return;
       }
 
-      const ok = await verifyPin(pin);
-
-      if (ok) {
-        if (!mountedRef.current) return;
-        setDigits([]);
-        onSuccess?.();
-        return;
-      }
-
-      const attemptsLeft = await getAttemptsLeft();
-
-      if (!mountedRef.current) return;
-
-      setMessage(
-        attemptsLeft === 0
-          ? textDescriptionLockedPage
-          : wrongPinMessage?.(attemptsLeft) ??
-              `Wrong PIN. ${attemptsLeft} attempts left`,
-      );
-
-      setShowErrorDots(true);
-      setDigits([]);
-
-      setTimeout(() => {
-        if (mountedRef.current) {
-          setShowErrorDots(false);
+      if (flow === "confirm") {
+        if (firstPin === pin) {
+          await setPin(pin);
+          setDigits([]);
+          setFirstPin(null);
+          setMessage("");
+          onSuccess?.();
+        } else {
+          setMessage(doNotMatchMessage);
+          setDigits([]);
+          setFirstPin(null);
+          setFlow("set");
         }
-      }, 1000);
+        return;
+      }
+
+      if (flow === "enter") {
+        if (isLocked) {
+          setMessage(lockedMessage);
+          setDigits([]);
+          return;
+        }
+
+        const ok = await verifyPin(pin);
+        if (ok) {
+          setDigits([]);
+          setMessage("");
+          onSuccess?.();
+        } else {
+          setMessage(
+            attemptsLeft === 0
+              ? textSubDescriptionLockedPage
+              : wrongPinMessage?.(attemptsLeft) ||
+                  `Wrong PIN. ${attemptsLeft} attempts left`
+          );
+          setShowErrorDots(true);
+          setDigits([]);
+          setTimeout(() => setShowErrorDots(false), 1000);
+        }
+      }
     },
     [
+      flow,
+      firstPin,
+      setPin,
       verifyPin,
-      isLocked,
-      getAttemptsLeft,
       onSuccess,
+      confirmMessage,
+      doNotMatchMessage,
+      isLocked,
       lockedMessage,
+      attemptsLeft,
+      textSubDescriptionLockedPage,
       wrongPinMessage,
-      textDescriptionLockedPage,
-    ],
+    ]
   );
 
   useEffect(() => {
     if (digits.length === pinLength) {
-      handleComplete(digits.join(''));
+      handleComplete(digits.join(""));
     }
   }, [digits, pinLength, handleComplete]);
 
   const push = useCallback(
     (d: string) => {
-      setDigits(prev =>
-        !locked && prev.length < pinLength ? [...prev, d] : prev,
+      setDigits((prev) =>
+        !isLocked && prev.length < pinLength ? [...prev, d] : prev
       );
     },
-    [locked, pinLength],
+    [isLocked, pinLength]
   );
 
-  const pop = useCallback(() => {
-    setDigits(prev => prev.slice(0, -1));
-  }, []);
+  const pop = useCallback(() => setDigits((prev) => prev.slice(0, -1)), []);
+
+  const getTitle = useCallback(() => {
+    if (isLocked) return lockedMessage;
+    if (flow === "set" || flow === "confirm") return titleSet;
+    return titleEnter;
+  }, [isLocked, flow, titleSet, titleEnter, lockedMessage]);
+
+  const showLockedUI = isLocked;
 
   return (
     <ScrollView contentContainerStyle={[styles.container, containerStyle]}>
       <Text style={[styles.title, titleStyle]} allowFontScaling={false}>
-        {locked ? lockedMessage : titleEnter}
+        {getTitle()}
       </Text>
+
+      {showLockedUI && (
+        <Text style={styles.lock} allowFontScaling={false}>
+          {textDescriptionLockedPage}
+        </Text>
+      )}
 
       <Text style={[styles.subtitle, subtitleStyle]} allowFontScaling={false}>
         {message}
       </Text>
 
-      {!locked && (
+      {!showLockedUI && (
         <>
           <PinDots
             pinLength={pinLength}
-            digits={digits.join('')}
+            digits={digits.join("")}
             showErrorDots={showErrorDots}
           />
           <PinKeypad onKeyPress={push} onDelete={pop} keyStyle={keyStyle} />
         </>
       )}
 
-      {locked && (
+      {showLockedUI && (
         <TouchableOpacity onPress={onPressForgetPin}>
           <Text style={styles.forgetPin} allowFontScaling={false}>
             {exitButtonText}

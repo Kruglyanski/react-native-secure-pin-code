@@ -65,6 +65,9 @@ babel.config.js-*
 **/android/gradlew.bat
 **/android/gradlew
 **/.expo/
+**/android/.cxx/
+**/.cxx/
+.cxx/
 
 # ==================================================
 # REACT NATIVE SPECIFIC

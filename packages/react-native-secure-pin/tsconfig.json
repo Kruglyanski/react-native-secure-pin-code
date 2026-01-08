@@ -6,7 +6,9 @@
     "strict": true,
     "declaration": true,
     "outDir": "dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "exclude": ["node_modules", "dist", "**/__tests__"]
 }
