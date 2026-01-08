@@ -1,8 +1,16 @@
 {
   "name": "@kruglyanski/react-native-secure-pin-code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Secure PIN code screen with biometric authentication for React Native (JS-only, New Architecture compatible)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kruglyanski/react-native-secure-pin-code"
+  },
+  "homepage": "https://github.com/kruglyanski/react-native-secure-pin-code#readme",
+  "bugs": {
+    "url": "https://github.com/kruglyanski/react-native-secure-pin-code/issues"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -22,5 +30,15 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3"
-  }
+  },
+  "keywords": [
+    "react-native",
+    "pin-code",
+    "biometrics",
+    "face-id",
+    "touch-id",
+    "secure",
+    "authentication",
+    "new-architecture"
+  ]
 }
