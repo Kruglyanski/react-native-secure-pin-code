@@ -49,20 +49,6 @@ yarn android
 
 ---
 
-## Project structure
-
-.
-├── example/                    # React Native example app
-├── packages/
-│   └── react-native-secure-pin-code/  # Library source code
-├── package.json                # Root workspace config
-├── yarn.lock
-|── .....
-└── README.md
-
-
----
-
 ## Development workflow
 
 1. Make changes in the library source code
