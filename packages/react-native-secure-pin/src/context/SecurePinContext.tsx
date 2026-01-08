@@ -21,7 +21,7 @@ const biometrics = new ReactNativeBiometrics();
 export const SecurePinProvider: React.FC<SecurePinProviderProps> = ({
   children,
   maxAttempts = 3,
-  lockDurationSec = 20,
+  lockDurationSec = 30,
   biometryPromptText = "Authenticate",
   biometryPromptCancelText = "Cancel",
   showBiometrics = true,

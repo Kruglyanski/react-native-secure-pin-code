@@ -1,6 +1,7 @@
 {
   "name": "react-native-secure-pin-monorepo",
   "private": true,
+  "license": "MIT",
   "workspaces": [
     "packages/*",
     "example-app"

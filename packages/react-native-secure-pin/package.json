@@ -1,11 +1,13 @@
 {
-  "name": "react-native-secure-pin",
+  "name": "@kruglyanski/react-native-secure-pin-code",
   "version": "0.1.0",
   "description": "Secure PIN code screen with biometric authentication for React Native (JS-only, New Architecture compatible)",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",

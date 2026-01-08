@@ -5,7 +5,7 @@ import {
   SecurePinProvider,
   SecurePinScreen,
   useSecurePin,
-} from "react-native-secure-pin";
+} from "@kruglyanski/react-native-secure-pin-code";
 
 export default function App() {
   return (

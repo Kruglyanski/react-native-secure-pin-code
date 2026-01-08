@@ -3,5 +3,6 @@ export { SecurePinScreen } from "./components/SecurePinScreen";
 
 export type {
   SecurePinProviderProps,
-  SecurePinAPI
+  SecurePinAPI,
+  SecurePinScreenProps
 } from "./types";
