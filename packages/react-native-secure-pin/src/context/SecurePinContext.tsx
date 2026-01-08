@@ -1,85 +1,201 @@
-import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
-import { SecurePinProviderProps, SecurePinAPI } from '../types/context';
-import { PinService } from '../services/pinService';
-import { authenticateBiometrics } from '../services/biometricsService';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
+import * as Keychain from "react-native-keychain";
+import DeviceInfo from "react-native-device-info";
+import { Platform } from "react-native";
+import ReactNativeBiometrics from "react-native-biometrics";
+import { Meta, SecurePinAPI, SecurePinProviderProps } from "../types";
+
+const META_KEY = "secure_pin_service_meta";
+const PIN_KEY = "secure_pin_service_pin";
 
 const SecurePinContext = createContext<SecurePinAPI | null>(null);
+const biometrics = new ReactNativeBiometrics();
 
 export const SecurePinProvider: React.FC<SecurePinProviderProps> = ({
   children,
-  biometryPrompt = 'Authenticate to unlock',
-  biometryPromptCancel = 'Cancel',
   maxAttempts = 3,
-  lockDurationSec = 30,
+  lockDurationSec = 20,
+  biometryPromptText = "Authenticate",
+  biometryPromptCancelText = "Cancel",
+  showBiometrics = true,
 }) => {
   const [hasPin, setHasPin] = useState<boolean | null>(null);
-  const [meta, setMeta] = useState<{ failedAttempts: number; lockUntil: number | null }>({
+  const [meta, setMeta] = useState<Meta>({
     failedAttempts: 0,
     lockUntil: null,
   });
 
-  const pinService = useMemo(() => new PinService({ maxAttempts, lockDurationSec }), [maxAttempts, lockDurationSec]);
+  const readMeta = useCallback(async (): Promise<Meta> => {
+    try {
+      const creds = await Keychain.getGenericPassword({ service: META_KEY });
+      if (!creds) return { failedAttempts: 0, lockUntil: null };
 
-  const refreshMeta = useCallback(async () => {
-    const m = await pinService.getMeta();
+      const parsed: Meta = JSON.parse(creds.password);
+
+      if (parsed.lockUntil && parsed.lockUntil <= Date.now()) {
+        return { failedAttempts: 0, lockUntil: null };
+      }
+
+      return parsed;
+    } catch {
+      return { failedAttempts: 0, lockUntil: null };
+    }
+  }, []);
+
+  const writeMeta = useCallback(async (m: Meta) => {
+    await Keychain.setGenericPassword("meta", JSON.stringify(m), {
+      service: META_KEY,
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    });
     setMeta(m);
-  }, [pinService]);
-
-  const isLocked = Boolean(meta.lockUntil && meta.lockUntil > Date.now());
-  const attemptsLeft = Math.max(0, maxAttempts - (meta.failedAttempts || 0));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      const pin = await pinService.getPin();
-      if (mounted) setHasPin(Boolean(pin));
 
-      const m = await pinService.getMeta();
-      if (mounted) setMeta(m);
+    (async () => {
+      const pin = await Keychain.getGenericPassword({ service: PIN_KEY });
+      const m = await readMeta();
+
+      if (!mounted) return;
+
+      setHasPin(Boolean(pin));
+      setMeta(m);
     })();
+
     return () => {
       mounted = false;
     };
-  }, [pinService]);
+  }, [readMeta]);
 
-  const setPin = useCallback(async (pin: string) => {
-    await pinService.setPin(pin);
-    setHasPin(true);
-    await refreshMeta();
-  }, [pinService, refreshMeta]);
+  useEffect(() => {
+    if (!meta.lockUntil) return;
 
-  const verifyPin = useCallback(async (pin: string) => {
-    const ok = await pinService.verifyPin(pin);
-    await refreshMeta();
-    return ok;
-  }, [pinService, refreshMeta]);
+    const id = setInterval(() => {
+      if (meta.lockUntil && meta.lockUntil <= Date.now()) {
+        writeMeta({ failedAttempts: 0, lockUntil: null });
+      }
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [meta.lockUntil, writeMeta]);
+
+  const isLocked = Boolean(meta.lockUntil && meta.lockUntil > Date.now());
+  const attemptsLeft = Math.max(0, maxAttempts - 1 - meta.failedAttempts);
+
+  const setPin = useCallback(
+    async (pin: string) => {
+      await Keychain.setGenericPassword("pin", pin, { service: PIN_KEY });
+      await writeMeta({ failedAttempts: 0, lockUntil: null });
+      setHasPin(true);
+    },
+    [writeMeta]
+  );
+
+  const checkPin = useCallback(
+    async (pin: string): Promise<boolean> => {
+      const m = await readMeta();
+
+      if (m.lockUntil && m.lockUntil > Date.now()) {
+        setMeta(m);
+        return false;
+      }
+
+      const creds = await Keychain.getGenericPassword({ service: PIN_KEY });
+      if (!creds) return false;
+
+      const ok = creds.password === pin;
+
+      if (ok) {
+        await writeMeta({ failedAttempts: 0, lockUntil: null });
+        return true;
+      }
+
+      const failed = m.failedAttempts + 1;
+      const next: Meta =
+        failed >= maxAttempts
+          ? {
+              failedAttempts: failed,
+              lockUntil: Date.now() + lockDurationSec * 1000,
+            }
+          : { failedAttempts: failed, lockUntil: null };
+
+      await writeMeta(next);
+      return false;
+    },
+    [maxAttempts, lockDurationSec, readMeta, writeMeta]
+  );
 
   const loginWithBiometrics = useCallback(async () => {
-    if (isLocked) return false;
-    return await authenticateBiometrics({ promptMessage: biometryPrompt, cancelButtonText: biometryPromptCancel });
-  }, [biometryPrompt, biometryPromptCancel, isLocked]);
+    if (isLocked || !showBiometrics || attemptsLeft < maxAttempts - 1)
+      return false;
+
+    if (Platform.OS === "ios" && (await DeviceInfo.isEmulator())) {
+      return false;
+    }
+
+    const { available } = await biometrics.isSensorAvailable();
+    if (!available) return false;
+
+    const res = await biometrics.simplePrompt({
+      promptMessage: biometryPromptText,
+      cancelButtonText: biometryPromptCancelText,
+    });
+
+    if (!res.success) return false;
+
+    await writeMeta({ failedAttempts: 0, lockUntil: null });
+    return true;
+  }, [isLocked, biometryPromptText, biometryPromptCancelText, writeMeta]);
 
   const deletePin = useCallback(async () => {
-    await pinService.deletePin();
+    await Keychain.resetGenericPassword({ service: PIN_KEY });
+    await Keychain.resetGenericPassword({ service: META_KEY }).catch(() => {});
     setHasPin(false);
-    await refreshMeta();
-  }, [pinService, refreshMeta]);
+    setMeta({ failedAttempts: 0, lockUntil: null });
+  }, []);
 
-  const value = useMemo<SecurePinAPI>(() => ({
-    hasPin,
-    isLocked,
-    attemptsLeft,
-    setPin,
-    verifyPin,
-    loginWithBiometrics,
-    deletePin,
-  }), [hasPin, isLocked, attemptsLeft, setPin, verifyPin, loginWithBiometrics, deletePin]);
+  const value = useMemo<SecurePinAPI>(
+    () => ({
+      hasPin,
+      isLocked,
+      lockUntil: meta.lockUntil,
+      attemptsLeft,
+      setPin,
+      checkPin,
+      loginWithBiometrics,
+      deletePin,
+    }),
+    [
+      hasPin,
+      isLocked,
+      meta.lockUntil,
+      attemptsLeft,
+      setPin,
+      checkPin,
+      loginWithBiometrics,
+      deletePin,
+      showBiometrics,
+    ]
+  );
 
-  return <SecurePinContext.Provider value={value}>{children}</SecurePinContext.Provider>;
+  return (
+    <SecurePinContext.Provider value={value}>
+      {children}
+    </SecurePinContext.Provider>
+  );
 };
 
 export function useSecurePin(): SecurePinAPI {
   const ctx = useContext(SecurePinContext);
-  if (!ctx) throw new Error('useSecurePin must be used within SecurePinProvider');
+  if (!ctx)
+    throw new Error("useSecurePin must be used within SecurePinProvider");
   return ctx;
 }
